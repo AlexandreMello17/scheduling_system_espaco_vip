@@ -154,7 +154,7 @@
   .btn-today { padding:6px 14px; background:var(--vs); color:var(--vd); border:none; border-radius:16px; font-size:12px; font-weight:600; cursor:pointer; }
   .filter-prof { padding:6px 12px; border:1.5px solid var(--cborda); border-radius:20px; font-family:'Inter',sans-serif; font-size:13px; color:var(--ctxt); background:white; cursor:pointer; outline:none; }
 
-  .agenda-grid { display:grid; gap:20px; }
+  .agenda-grid { display:grid; gap:20px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
   .prof-column { background:white; border-radius:var(--r); box-shadow:var(--sombra); overflow:hidden; }
   .prof-column-header { padding:16px 20px; display:flex; align-items:center; gap:12px; border-bottom:1px solid var(--cborda); }
   .prof-column-header .prof-avatar { width:40px; height:40px; font-size:14px; }
@@ -198,6 +198,9 @@
   .modal-close { position:absolute; top:16px; right:16px; width:32px; height:32px; background:var(--cleve); border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; color:#6B7280; font-size:18px; transition:background .15s; }
   .modal-close:hover { background:var(--cborda); }
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .service-list { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+  .service-row { background: #F8F9F5; border:1px solid var(--cborda); border-radius:16px; padding:16px; }
+  .service-row .form-row { gap:12px; }
   .modal-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:28px; }
   .btn-secondary { padding:11px 20px; background:white; color:var(--vm); border:1.5px solid var(--cborda); border-radius:var(--rs); font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
   .btn-secondary:hover { background:var(--cleve); }
@@ -246,6 +249,18 @@
     .header { padding:0 16px; }
     .header-brand-sub { display:none; }
     .stats-grid { grid-template-columns:1fr 1fr; }
+    /* Mobile-specific adjustments for better touch/layout */
+    .agenda-grid { grid-template-columns:1fr; }
+    .prof-column { border-radius:12px; }
+    .agendamento-card { padding:12px; }
+    .ag-actions { position:static; top:auto; right:auto; opacity:1; margin-top:8px; }
+    .ag-btn { width:44px; height:44px; border-radius:8px; }
+    .ag-btn svg { width:18px; height:18px; }
+    .modal { width:90%; max-width:480px; padding:20px; }
+    .modal-close { width:36px; height:36px; top:12px; right:12px; }
+    .service-row .form-row { grid-template-columns:1fr; }
+    .service-list { gap:10px; }
+    .modal-actions { flex-direction:column-reverse; gap:10px; }
   }
 </style>
 </head>
@@ -271,7 +286,7 @@
     <div class="login-error" id="login-error">Usuário ou senha incorretos.</div>
     <div class="form-group">
       <label>Usuário</label>
-      <input type="text" id="login-user" placeholder="secretaria" autocomplete="username">
+      <input type="text" id="login-user" placeholder=" " autocomplete="username">
     </div>
     <div class="form-group">
       <label>Senha</label>
@@ -428,12 +443,21 @@
       </select>
     </div>
     <div class="form-group">
-      <label>Serviço *</label>
-      <input type="text" id="f-servico" placeholder="Ex: Coloração, Manicure, Unhas em gel...">
+      <label>Serviços *</label>
+      <div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center">
+          <input type="text" id="f-servico" placeholder=" " style="flex:1;padding:10px;border:1px solid var(--cborda);border-radius:12px;font-size:14px" />
+          <input type="text" id="f-valor" placeholder="Valor (R$)" style="width:140px;padding:10px;border:1px solid var(--cborda);border-radius:12px;font-size:14px" />
+        </div>
+        <div class="service-list" id="service-list" style="display:none"></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button type="button" class="btn-secondary" id="add-service-btn">+ Adicionar serviço</button>
+        </div>
+      </div>
     </div>
     <div class="form-group">
       <label>WhatsApp da Cliente</label>
-      <input type="tel" id="f-whats" placeholder="(21) 99999-9999 (opcional)">
+      <input type="tel" id="f-whats" placeholder=" ">
     </div>
     <div class="form-group">
       <label>Observações</label>
@@ -477,7 +501,7 @@
     </div>
     <div class="form-group">
       <label>WhatsApp</label>
-      <input type="tel" id="fc-whats" placeholder="(21) 99999-9999 (opcional)">
+      <input type="tel" id="fc-whats" placeholder=" ">
     </div>
     <div class="modal-actions">
       <button class="btn-secondary" onclick="closeModalCliente()">Cancelar</button>
@@ -742,26 +766,25 @@ window.renderAgenda = function(){
   grid.innerHTML='';
 
   profsToShow.forEach(prof=>{
-    const profAgs=dayAgs.filter(a=>a.profId===prof.id).sort((a,b)=>a.hora>b.hora?1:-1);
-    const ativasP=profAgs.filter(a=>a.status!=='cancelado').length;
+    // mostrar somente agendamentos não cancelados na agenda do dia
+    const profAgs=dayAgs.filter(a=>a.profId===prof.id && a.status!=='cancelado').sort((a,b)=>a.hora>b.hora?1:-1);
+    const ativasP=profAgs.length;
     let cards='';
     if(!profAgs.length){
       cards=`<div class="empty-col"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z"/></svg>Nenhum agendamento</div>`;
     } else {
       profAgs.forEach(ag=>{
-        const c=ag.status==='cancelado';
         cards+=`
-          <div class="agendamento-card${c?' cancelado':''}">
+          <div class="agendamento-card">
             <div class="ag-time">${ag.hora}</div>
             <div class="ag-client">${ag.nome}</div>
-            <div class="ag-service">${ag.servico}</div>
+            <div class="ag-service">${ag.servico}${ag.valor?` · R$ ${ag.valor}`:''}</div>
             <div class="ag-phone">
               <svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
               ${ag.whats}
             </div>
             ${ag.obs?`<div style="font-size:11px;color:#9CA3AF;margin-top:4px;font-style:italic">${ag.obs}</div>`:''}
-            <span class="ag-status">${c?'Cancelado':'Confirmado'}</span>
-            ${!c?`
+            <span class="ag-status">Confirmado</span>
             <div class="ag-actions">
               <button class="ag-btn ag-btn-edit" onclick="editAgendamento('${ag.id}')" title="Editar">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -772,7 +795,7 @@ window.renderAgenda = function(){
               <button class="ag-btn ag-btn-cancel" onclick="askCancel('${ag.id}')" title="Cancelar">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
               </button>
-            </div>`:''}
+            </div>
           </div>`;
       });
     }
@@ -827,7 +850,7 @@ function renderTodos(){
           <div><div style="font-size:13px;font-weight:600">${p?.nome}</div><div style="font-size:11px;color:#7A9A7B">${p?.cargo}</div></div>
         </div>
       </td>
-      <td style="padding:12px 16px;font-size:13px">${ag.servico}</td>
+      <td style="padding:12px 16px;font-size:13px">${ag.servico}${ag.valor?` · R$ ${ag.valor}`:''}</td>
       <td style="padding:12px 16px;font-size:13px">${ag.whats}</td>
       <td style="padding:12px 16px">
         <span style="font-size:10px;font-weight:600;padding:3px 10px;border-radius:10px;background:${c?'#F3F4F6':'#D1FAE5'};color:${c?'#6B7280':'#065F46'}">${c?'Cancelado':'Confirmado'}</span>
@@ -912,7 +935,13 @@ window.openModal = function(){
   document.getElementById('f-data').value=getDateStr(currentDate);
   document.getElementById('f-hora').value='';
   document.getElementById('f-prof').value='';
-  document.getElementById('f-servico').value='';
+  // reset serviços: mostrar input compacto e esconder lista
+  const fvalor = document.getElementById('f-valor');
+  if(fvalor){ fvalor.value=''; fvalor.style.display='inline-block'; }
+  const svcIn = document.getElementById('f-servico');
+  const svcList = document.getElementById('service-list');
+  if(svcIn) { svcIn.value=''; svcIn.style.display='inline-block'; }
+  if(svcList) { svcList.innerHTML=''; svcList.style.display='none'; }
   document.getElementById('f-whats').value='';
   document.getElementById('f-obs').value='';
   document.getElementById('modal-overlay').classList.add('active');
@@ -933,7 +962,14 @@ window.editAgendamento = function(id){
   document.getElementById('f-data').value=ag.data;
   document.getElementById('f-hora').value=ag.hora;
   document.getElementById('f-prof').value=ag.profId;
-  document.getElementById('f-servico').value=ag.servico;
+  // preenche serviço único (quando se edita um agendamento existente)
+  const fvalor = document.getElementById('f-valor');
+  if(fvalor){ fvalor.value = ag.valor||''; fvalor.style.display='inline-block'; }
+  // mostrar campo compacto com o serviço (lista escondida)
+  const svcIn = document.getElementById('f-servico');
+  const svcList = document.getElementById('service-list');
+  if(svcIn){ svcIn.value = ag.servico || ''; svcIn.style.display='inline-block'; }
+  if(svcList){ svcList.innerHTML=''; svcList.style.display='none'; }
   document.getElementById('f-whats').value=ag.whats||'';
   document.getElementById('f-obs').value=ag.obs||'';
   document.getElementById('modal-overlay').classList.add('active');
@@ -948,23 +984,50 @@ window.saveAgendamento = async function(){
   const data=document.getElementById('f-data').value;
   const hora=document.getElementById('f-hora').value;
   const profId=document.getElementById('f-prof').value;
-  const servico=document.getElementById('f-servico').value;
+  const servico=document.getElementById('f-servico')?.value || '';
+  const valor=document.getElementById('f-valor')?.value.trim()||'';
+  // coletar serviços da lista
+  const serviceRows = Array.from(document.querySelectorAll('.service-row'));
+  const services = serviceRows.map(r=>{
+    const s = (r.querySelector('.f-servico-item')||{}).value||'';
+    const p = (r.querySelector('.f-prof-item')||{}).value||'';
+    const v = (r.querySelector('.f-valor-item')||{}).value||'';
+    return { servico: s.trim(), profId: p, valor: v.trim() };
+  }).filter(x=>x.servico);
   const whats=document.getElementById('f-whats').value.trim();
   const obs=document.getElementById('f-obs').value.trim();
-  if(!nome||!data||!hora||!profId||!servico){
+  if(!nome||!data||!hora||!profId){
     showToast('Preencha todos os campos obrigatórios!','⚠️'); return;
+  }
+  // Se a lista detalhada estiver vazia, usar o campo compacto (valor também)
+  let finalServices = services;
+  if(services.length===0){
+    const compactSvc = (document.getElementById('f-servico')||{}).value.trim();
+    const compactValor = (document.getElementById('f-valor')||{}).value.trim()||'';
+    if(!editingId && !compactSvc){ showToast('Adicione ao menos um serviço!','⚠️'); return; }
+    if(compactSvc) finalServices = [{ servico: compactSvc, profId: '', valor: compactValor }];
   }
   setSyncing(true);
   try {
-    if(editingId){
-      await updateDoc(doc(db,'agendamentos',editingId),{nome,data,hora,profId,servico,whats,obs});
-      showToast('Agendamento atualizado!','✏️');
-    } else {
-      await addDoc(collection(db,'agendamentos'),{
-        nome,data,hora,profId,servico,whats,obs,
-        status:'confirmado', reminderSent:false, criadoEm:serverTimestamp()
+      const firstService = finalServices[0] || null;
+      if(editingId){
+        // edição simples de um agendamento existente: usa primeiro serviço da lista quando existir
+        const svcName = firstService?.servico || servico || '';
+        const targetProfForEdit = firstService?.profId || profId;
+        await updateDoc(doc(db,'agendamentos',editingId),{nome,data,hora,profId:targetProfForEdit,servico:svcName,valor,whats,obs});
+        showToast('Agendamento atualizado!','✏️');
+      } else {
+      // cria um documento por serviço selecionado
+      const batchCreates = finalServices.map(svc=>{
+        const targetProf = svc.profId||profId;
+        const svcValor = svc.valor||valor||'';
+        return addDoc(collection(db,'agendamentos'),{
+          nome,data,hora,profId:targetProf,servico:svc.servico,valor:svcValor,whats,obs,
+          status:'confirmado', reminderSent:false, criadoEm:serverTimestamp()
+        });
       });
-      showToast('Agendamento salvo!','✅');
+      await Promise.all(batchCreates);
+      showToast('Agendamentos salvos!','✅');
     }
     closeModal();
   } catch(e){
@@ -1005,7 +1068,7 @@ window.sendWhatsApp = function(id){
   if(!ag) return;
   const prof=PROFISSIONAIS.find(p=>p.id===ag.profId);
   const msg=encodeURIComponent(
-    `Olá ${ag.nome}! 👋\n\nPassando para lembrar do seu horário no *Espaço Vip Sulacap*:\n\n📅 Data: ${formatDateBR(ag.data)}\n🕐 Horário: ${ag.hora}\n✨ Serviço: ${ag.servico}\n💅 Profissional: ${prof?.nome}\n\nTe esperamos! 🌿💚`
+    `Olá ${ag.nome}! 👋\n\nPassando para lembrar do seu horário no *Espaço Vip Sulacap*:\n\n📅 Data: ${formatDateBR(ag.data)}\n🕐 Horário: ${ag.hora}\n✨ Serviço: ${ag.servico}${ag.valor?` — R$ ${ag.valor}`:''}\n💅 Profissional: ${prof?.nome}\n\nTe esperamos! 🌿💚`
   );
   const num=ag.whats.replace(/\D/g,'');
   const full=num.startsWith('55')?num:'55'+num;
@@ -1018,6 +1081,101 @@ document.getElementById('f-whats').addEventListener('input',function(){
 });
 document.getElementById('fc-whats').addEventListener('input',function(){
   this.value=formatPhone(this.value);
+});
+
+// ── Serviços múltiplos UI helpers
+function serviceRowHTML(data){
+  const profOptions = `
+    <option value="">(usar profissional do agendamento)</option>
+    <option value="vanessa-s">Vanessa Santos — Cabeleleira</option>
+    <option value="janaina">Janaína — Cabeleleira</option>
+    <option value="rayhara">Rayhara — Nail Designer</option>
+    <option value="vanessa-m">Vanessa — Manicure</option>
+    <option value="laura">Laura — Estética</option>`;
+  const serv = data?.servico||'';
+  const profId = data?.profId||'';
+  return `
+    <div class="service-row">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+        <button type="button" class="btn-secondary" onclick="removeServiceRow(this)">Remover</button>
+      </div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr 120px">
+        <div class="form-group">
+          <label>Serviço</label>
+          <input type="text" class="f-servico-item" placeholder=" " value="${serv}">
+        </div>
+        <div class="form-group">
+          <label>Profissional</label>
+          <select class="f-prof-item">${profOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Valor (R$)</label>
+          <input type="text" class="f-valor-item" placeholder="0,00" value="${data?.valor||''}" style="padding:10px;border:1px solid var(--cborda);border-radius:10px;font-size:14px" />
+        </div>
+      </div>
+    </div>`;
+}
+
+window.removeServiceRow = function(btn){
+  const row = btn.closest('.service-row');
+  if(!row) return;
+  // capture values before removing
+  const svc = (row.querySelector('.f-servico-item')||{}).value||'';
+  const val = (row.querySelector('.f-valor-item')||{}).value||'';
+  row.remove();
+  const list = document.getElementById('service-list');
+  // if no more rows, show compact inputs and restore values
+  if(list && list.children.length===0){
+    const compact = document.getElementById('f-servico');
+    const compactValInput = document.getElementById('f-valor');
+    if(compact){ compact.style.display='inline-block'; compact.value = svc || '' }
+    if(compactValInput){ compactValInput.style.display='inline-block'; compactValInput.value = val || '' }
+    list.style.display='none';
+  }
+}
+
+function initServiceList(items){
+  const list = document.getElementById('service-list');
+  if(!list) return;
+  list.innerHTML='';
+  const toAdd = items && items.length? items : [null];
+  toAdd.forEach(it=>{
+    list.insertAdjacentHTML('beforeend', serviceRowHTML(it));
+    if(it){
+      const last = list.lastElementChild;
+      const sel = last.querySelector('.f-prof-item');
+      if(sel && it.profId) sel.value = it.profId;
+      const val = last.querySelector('.f-valor-item');
+      if(val && it.valor) val.value = it.valor;
+    }
+  });
+}
+
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id==='add-service-btn'){
+    const list=document.getElementById('service-list');
+    const compact = document.getElementById('f-servico');
+    const profSel = document.getElementById('f-prof');
+    const compactVal = (document.getElementById('f-valor')||{}).value||'';
+    if(list && list.children.length===0){
+      // create first row using compact input value
+      const data = { servico: compact?.value||'', profId: profSel?.value||'', valor: compactVal };
+      list.insertAdjacentHTML('beforeend', serviceRowHTML(data));
+      // set select/value if provided
+      const last = list.lastElementChild;
+      if(last && data.profId){ const sel = last.querySelector('.f-prof-item'); if(sel) sel.value = data.profId; }
+      const valIn = last.querySelector('.f-valor-item'); if(valIn && data.valor) valIn.value = data.valor;
+      // show detailed list and hide compact inputs
+      list.style.display='flex';
+      if(compact) compact.style.display='none';
+      const compactValInput = document.getElementById('f-valor'); if(compactValInput) compactValInput.style.display='none';
+    } else if(list){
+      list.insertAdjacentHTML('beforeend', serviceRowHTML());
+      list.style.display='flex';
+      if(compact) compact.style.display='none';
+      const compactValInput = document.getElementById('f-valor'); if(compactValInput) compactValInput.style.display='none';
+    }
+  }
 });
 
 // ── Clientes / Aniversariantes ────────────────────────────────────────────────
