@@ -200,7 +200,8 @@
   .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .service-list { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
   .service-row { background: #F8F9F5; border:1px solid var(--cborda); border-radius:16px; padding:16px; }
-  .service-row .form-row { gap:12px; }
+  .service-row .form-row { grid-template-columns:1.3fr 1fr 100px 100px; gap:12px; }
+  .service-row .form-group input, .service-row .form-group select { width:100%; }
   .modal-actions { display:flex; justify-content:flex-end; gap:12px; margin-top:28px; }
   .btn-secondary { padding:11px 20px; background:white; color:var(--vm); border:1.5px solid var(--cborda); border-radius:var(--rs); font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; }
   .btn-secondary:hover { background:var(--cleve); }
@@ -382,12 +383,22 @@
         <div class="page-header">
           <div>
             <div class="page-title">Todos os Agendamentos</div>
-            <div class="page-subtitle">Histórico completo — salvo na nuvem</div>
+            <div class="page-subtitle">Histórico completo</div>
           </div>
-          <button class="btn-novo" onclick="openModal()">
-            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            Novo Agendamento
-          </button>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <select class="filter-prof" id="filter-prof-todos" onchange="renderTodos()">
+              <option value="">Todas as profissionais</option>
+              <option value="vanessa-s">Vanessa Santos</option>
+              <option value="janaina">Janaína</option>
+              <option value="rayhara">Rayhara</option>
+              <option value="vanessa-m">Vanessa</option>
+              <option value="laura">Laura</option>
+            </select>
+            <button class="btn-novo" onclick="openModal()">
+              <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+              Novo Agendamento
+            </button>
+          </div>
         </div>
         <div id="todos-list"></div>
       </div>
@@ -495,9 +506,62 @@
       <label>Nome da Cliente *</label>
       <input type="text" id="fc-nome" placeholder="Nome completo">
     </div>
-    <div class="form-group">
-      <label>Data de Aniversário *</label>
-      <input type="date" id="fc-aniv">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Mês de Aniversário *</label>
+        <select id="fc-aniv-month">
+          <option value="">Mês</option>
+          <option value="01">Janeiro</option>
+          <option value="02">Fevereiro</option>
+          <option value="03">Março</option>
+          <option value="04">Abril</option>
+          <option value="05">Maio</option>
+          <option value="06">Junho</option>
+          <option value="07">Julho</option>
+          <option value="08">Agosto</option>
+          <option value="09">Setembro</option>
+          <option value="10">Outubro</option>
+          <option value="11">Novembro</option>
+          <option value="12">Dezembro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Dia de Aniversário *</label>
+        <select id="fc-aniv-day">
+          <option value="">Dia</option>
+          <option value="01">1</option>
+          <option value="02">2</option>
+          <option value="03">3</option>
+          <option value="04">4</option>
+          <option value="05">5</option>
+          <option value="06">6</option>
+          <option value="07">7</option>
+          <option value="08">8</option>
+          <option value="09">9</option>
+          <option value="10">10</option>
+          <option value="11">11</option>
+          <option value="12">12</option>
+          <option value="13">13</option>
+          <option value="14">14</option>
+          <option value="15">15</option>
+          <option value="16">16</option>
+          <option value="17">17</option>
+          <option value="18">18</option>
+          <option value="19">19</option>
+          <option value="20">20</option>
+          <option value="21">21</option>
+          <option value="22">22</option>
+          <option value="23">23</option>
+          <option value="24">24</option>
+          <option value="25">25</option>
+          <option value="26">26</option>
+          <option value="27">27</option>
+          <option value="28">28</option>
+          <option value="29">29</option>
+          <option value="30">30</option>
+          <option value="31">31</option>
+        </select>
+      </div>
     </div>
     <div class="form-group">
       <label>WhatsApp</label>
@@ -815,8 +879,13 @@ window.renderAgenda = function(){
 };
 
 // ── Render Todos ──────────────────────────────────────────────────────────────
-function renderTodos(){
-  const sorted=[...agendamentos].sort((a,b)=>{
+window.renderTodos = function(){
+  const profFilter = document.getElementById('filter-prof-todos')?.value || '';
+  let sorted = [...agendamentos];
+  if(profFilter){
+    sorted = sorted.filter(ag => ag.profId===profFilter);
+  }
+  sorted = sorted.sort((a,b)=>{
     if(a.data!==b.data) return a.data<b.data?1:-1;
     return a.hora<b.hora?1:-1;
   });
@@ -986,43 +1055,69 @@ window.saveAgendamento = async function(){
   const profId=document.getElementById('f-prof').value;
   const servico=document.getElementById('f-servico')?.value || '';
   const valor=document.getElementById('f-valor')?.value.trim()||'';
-  // coletar serviços da lista
+  const whats=document.getElementById('f-whats').value.trim();
+  const obs=document.getElementById('f-obs').value.trim();
+
   const serviceRows = Array.from(document.querySelectorAll('.service-row'));
   const services = serviceRows.map(r=>{
     const s = (r.querySelector('.f-servico-item')||{}).value||'';
     const p = (r.querySelector('.f-prof-item')||{}).value||'';
     const v = (r.querySelector('.f-valor-item')||{}).value||'';
-    return { servico: s.trim(), profId: p, valor: v.trim() };
-  }).filter(x=>x.servico);
-  const whats=document.getElementById('f-whats').value.trim();
-  const obs=document.getElementById('f-obs').value.trim();
-  if(!nome||!data||!hora||!profId){
-    showToast('Preencha todos os campos obrigatórios!','⚠️'); return;
+    const h = (r.querySelector('.f-hora-item')||{}).value||'';
+    return { servico: s.trim(), profId: p, valor: v.trim(), hora: h };
+  }).filter(x=>x.servico || x.hora || x.profId || x.valor);
+
+  if(!nome||!data||(!profId && services.every(s=>!s.profId))){
+    showToast('Preencha os campos obrigatórios e selecione uma profissional.','⚠️'); return;
   }
-  // Se a lista detalhada estiver vazia, usar o campo compacto (valor também)
+
   let finalServices = services;
   if(services.length===0){
     const compactSvc = (document.getElementById('f-servico')||{}).value.trim();
     const compactValor = (document.getElementById('f-valor')||{}).value.trim()||'';
+    const compactHora = hora;
     if(!editingId && !compactSvc){ showToast('Adicione ao menos um serviço!','⚠️'); return; }
-    if(compactSvc) finalServices = [{ servico: compactSvc, profId: '', valor: compactValor }];
+    if(compactSvc) finalServices = [{ servico: compactSvc, profId: profId, valor: compactValor, hora: compactHora }];
   }
+
+  const missingHour = finalServices.find(s=>!s.hora);
+  if(missingHour){
+    showToast('Preencha a hora de cada serviço.','⚠️'); return;
+  }
+
+  const duplicatedHour = finalServices.some((svc, index)=>
+    finalServices.some((other, otherIndex)=> otherIndex !== index && other.hora === svc.hora)
+  );
+  if(duplicatedHour){
+    showToast('Não é possível cadastrar dois serviços no mesmo horário.','⚠️'); return;
+  }
+
+  const hasConflict = finalServices.some(svc=>
+    agendamentos.some(ag=>
+      ag.data===data && ag.status!=='cancelado' && ag.id!==editingId && ag.hora===svc.hora
+    )
+  );
+  if(hasConflict){
+    showToast('Já existe um agendamento neste horário.','⚠️'); return;
+  }
+
   setSyncing(true);
   try {
-      const firstService = finalServices[0] || null;
-      if(editingId){
-        // edição simples de um agendamento existente: usa primeiro serviço da lista quando existir
-        const svcName = firstService?.servico || servico || '';
-        const targetProfForEdit = firstService?.profId || profId;
-        await updateDoc(doc(db,'agendamentos',editingId),{nome,data,hora,profId:targetProfForEdit,servico:svcName,valor,whats,obs});
-        showToast('Agendamento atualizado!','✏️');
-      } else {
-      // cria um documento por serviço selecionado
+    const firstService = finalServices[0] || null;
+    if(editingId){
+      const svcName = firstService?.servico || servico || '';
+      const targetProfForEdit = firstService?.profId || profId;
+      const svcHora = firstService?.hora || hora;
+      const svcValor = firstService?.valor || valor || '';
+      await updateDoc(doc(db,'agendamentos',editingId),{nome,data,hora:svcHora,profId:targetProfForEdit,servico:svcName,valor:svcValor,whats,obs});
+      showToast('Agendamento atualizado!','✏️');
+    } else {
       const batchCreates = finalServices.map(svc=>{
         const targetProf = svc.profId||profId;
         const svcValor = svc.valor||valor||'';
+        const svcHora = svc.hora || hora;
         return addDoc(collection(db,'agendamentos'),{
-          nome,data,hora,profId:targetProf,servico:svc.servico,valor:svcValor,whats,obs,
+          nome,data,hora:svcHora,profId:targetProf,servico:svc.servico,valor:svcValor,whats,obs,
           status:'confirmado', reminderSent:false, criadoEm:serverTimestamp()
         });
       });
@@ -1094,12 +1189,13 @@ function serviceRowHTML(data){
     <option value="laura">Laura — Estética</option>`;
   const serv = data?.servico||'';
   const profId = data?.profId||'';
+  const hora = data?.hora||'';
   return `
     <div class="service-row">
       <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
         <button type="button" class="btn-secondary" onclick="removeServiceRow(this)">Remover</button>
       </div>
-      <div class="form-row" style="grid-template-columns:1fr 1fr 120px">
+      <div class="form-row" style="grid-template-columns:1.3fr 1fr 100px 100px">
         <div class="form-group">
           <label>Serviço</label>
           <input type="text" class="f-servico-item" placeholder=" " value="${serv}">
@@ -1107,6 +1203,10 @@ function serviceRowHTML(data){
         <div class="form-group">
           <label>Profissional</label>
           <select class="f-prof-item">${profOptions}</select>
+        </div>
+        <div class="form-group">
+          <label>Hora</label>
+          <input type="time" class="f-hora-item" value="${hora}" style="padding:10px;border:1px solid var(--cborda);border-radius:10px;font-size:14px" />
         </div>
         <div class="form-group">
           <label>Valor (R$)</label>
@@ -1119,17 +1219,18 @@ function serviceRowHTML(data){
 window.removeServiceRow = function(btn){
   const row = btn.closest('.service-row');
   if(!row) return;
-  // capture values before removing
   const svc = (row.querySelector('.f-servico-item')||{}).value||'';
   const val = (row.querySelector('.f-valor-item')||{}).value||'';
+  const hora = (row.querySelector('.f-hora-item')||{}).value||'';
   row.remove();
   const list = document.getElementById('service-list');
-  // if no more rows, show compact inputs and restore values
   if(list && list.children.length===0){
     const compact = document.getElementById('f-servico');
     const compactValInput = document.getElementById('f-valor');
+    const compactHourInput = document.getElementById('f-hora');
     if(compact){ compact.style.display='inline-block'; compact.value = svc || '' }
     if(compactValInput){ compactValInput.style.display='inline-block'; compactValInput.value = val || '' }
+    if(compactHourInput){ compactHourInput.value = hora || compactHourInput.value }
     list.style.display='none';
   }
 }
@@ -1157,15 +1258,14 @@ document.addEventListener('click', function(e){
     const compact = document.getElementById('f-servico');
     const profSel = document.getElementById('f-prof');
     const compactVal = (document.getElementById('f-valor')||{}).value||'';
+    const compactHora = (document.getElementById('f-hora')||{}).value||'';
     if(list && list.children.length===0){
-      // create first row using compact input value
-      const data = { servico: compact?.value||'', profId: profSel?.value||'', valor: compactVal };
+      const data = { servico: compact?.value||'', profId: profSel?.value||'', valor: compactVal, hora: compactHora };
       list.insertAdjacentHTML('beforeend', serviceRowHTML(data));
-      // set select/value if provided
       const last = list.lastElementChild;
       if(last && data.profId){ const sel = last.querySelector('.f-prof-item'); if(sel) sel.value = data.profId; }
       const valIn = last.querySelector('.f-valor-item'); if(valIn && data.valor) valIn.value = data.valor;
-      // show detailed list and hide compact inputs
+      const horaIn = last.querySelector('.f-hora-item'); if(horaIn && data.hora) horaIn.value = data.hora;
       list.style.display='flex';
       if(compact) compact.style.display='none';
       const compactValInput = document.getElementById('f-valor'); if(compactValInput) compactValInput.style.display='none';
@@ -1183,18 +1283,34 @@ const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agos
 
 function getMesAtual(){ return new Date().getMonth()+1; }
 
+function parseAnivValue(s){
+  if(!s) return null;
+  const parts=s.split('-').map(x=>x.trim());
+  if(parts.length===2){
+    return { m: parseInt(parts[0],10), d: parseInt(parts[1],10) };
+  }
+  if(parts.length===3){
+    return { m: parseInt(parts[1],10), d: parseInt(parts[2],10) };
+  }
+  return null;
+}
+
 function aniversariantesDoMes(){
   const mes=getMesAtual();
   return clientes.filter(c=>{
-    if(!c.aniv) return false;
-    return parseInt(c.aniv.split('-')[1])===mes;
-  }).sort((a,b)=>parseInt(a.aniv.split('-')[2])-parseInt(b.aniv.split('-')[2]));
+    const aniv = parseAnivValue(c.aniv);
+    return aniv && aniv.m===mes;
+  }).sort((a,b)=>{
+    const aa=parseAnivValue(a.aniv);
+    const bb=parseAnivValue(b.aniv);
+    return (aa?.d||0)-(bb?.d||0);
+  });
 }
 
 function formatAniv(s){
-  if(!s) return '—';
-  const[,m,d]=s.split('-');
-  return `${parseInt(d)} de ${MESES[parseInt(m)-1]}`;
+  const aniv = parseAnivValue(s);
+  if(!aniv) return '—';
+  return `${aniv.d} de ${MESES[aniv.m-1]}`;
 }
 
 function updateAnivCount(){
@@ -1289,7 +1405,8 @@ window.openModalCliente=function(){
   editingClienteId=null;
   document.getElementById('modal-cliente-title').textContent='Cadastrar Cliente';
   document.getElementById('fc-nome').value='';
-  document.getElementById('fc-aniv').value='';
+  document.getElementById('fc-aniv-month').value='';
+  document.getElementById('fc-aniv-day').value='';
   document.getElementById('fc-whats').value='';
   document.getElementById('modal-cliente-overlay').classList.add('active');
   setTimeout(()=>document.getElementById('fc-nome').focus(),100);
@@ -1303,18 +1420,22 @@ window.editCliente=function(id){
   const c=clientes.find(x=>x.id===id);
   if(!c) return;
   editingClienteId=id;
+  const aniv = parseAnivValue(c.aniv);
   document.getElementById('modal-cliente-title').textContent='Editar Cliente';
   document.getElementById('fc-nome').value=c.nome;
-  document.getElementById('fc-aniv').value=c.aniv||'';
+  document.getElementById('fc-aniv-month').value=aniv?.m?String(aniv.m).padStart(2,'0'):'';
+  document.getElementById('fc-aniv-day').value=aniv?.d?String(aniv.d).padStart(2,'0'):'';
   document.getElementById('fc-whats').value=c.whats||'';
   document.getElementById('modal-cliente-overlay').classList.add('active');
 };
 
 window.saveCliente=async function(){
   const nome=document.getElementById('fc-nome').value.trim();
-  const aniv=document.getElementById('fc-aniv').value;
+  const anivMonth=document.getElementById('fc-aniv-month').value;
+  const anivDay=document.getElementById('fc-aniv-day').value;
   const whats=document.getElementById('fc-whats').value.trim();
-  if(!nome||!aniv){ showToast('Preencha nome e data de aniversário!','⚠️'); return; }
+  if(!nome||!anivMonth||!anivDay){ showToast('Preencha nome, mês e dia de aniversário!','⚠️'); return; }
+  const aniv=`${anivMonth}-${anivDay}`;
   setSyncing(true);
   try {
     if(editingClienteId){
